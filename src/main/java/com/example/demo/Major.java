@@ -13,9 +13,9 @@ public class Major {
         this.id = id;
         this.majorName = majorName;
         this.courses = courses;
+
     }
 
-    // Getters and setters
     public String getId() {
         return id;
     }
@@ -39,4 +39,6 @@ public class Major {
     public void setCourses(List<String> courses) {
         this.courses = courses;
     }
+
+
 }
