@@ -1,27 +1,28 @@
 package com.example.demo;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+
 public class PublicSchedule {
     private String id;
     private String majorName;
-    private CourseSchudle[] sunday;
-    private CourseSchudle[] monday;
-    private CourseSchudle[] tuesday;
-    private CourseSchudle[] wednesday;
-    private CourseSchudle[] thursday;
-    private CourseSchudle[] friday;
+    private String sunday;
+    private String monday;
+    private String tuesday;
+    private String wednesday;
+    private String thursday;
+    private String friday;
 
     public PublicSchedule() {}
 
     public PublicSchedule(String id, String majorName, CourseSchudle[] sunday, CourseSchudle[] monday, CourseSchudle[] tuesday, CourseSchudle[] wednesday, CourseSchudle[] thursday, CourseSchudle[] friday) {
         this.id = id;
         this.majorName = majorName;
-        this.sunday = sunday;
-        this.monday = monday;
-        this.tuesday = tuesday;
-        this.wednesday = wednesday;
-        this.thursday = thursday;
-        this.friday = friday;
+        this.sunday = Arrays.toString(sunday);
+        this.monday = Arrays.toString(monday);
+        this.tuesday = Arrays.toString(tuesday);
+        this.wednesday = Arrays.toString(wednesday);
+        this.thursday = Arrays.toString(thursday);
+        this.friday = Arrays.toString(friday);
     }
 
     public String getId() {
@@ -40,51 +41,51 @@ public class PublicSchedule {
         this.majorName = majorName;
     }
 
-    public CourseSchudle[] getSunday() {
+    public String getSunday() {
         return sunday;
     }
 
-    public void setSunday(CourseSchudle[] sunday) {
+    public void setSunday(String sunday) {
         this.sunday = sunday;
     }
 
-    public CourseSchudle[] getMonday() {
+    public String getMonday() {
         return monday;
     }
 
-    public void setMonday(CourseSchudle[] monday) {
+    public void setMonday(String monday) {
         this.monday = monday;
     }
 
-    public CourseSchudle[] getTuesday() {
+    public String getTuesday() {
         return tuesday;
     }
 
-    public void setTuesday(CourseSchudle[] tuesday) {
+    public void setTuesday(String tuesday) {
         this.tuesday = tuesday;
     }
 
-    public CourseSchudle[] getWednesday() {
+    public String getWednesday() {
         return wednesday;
     }
 
-    public void setWednesday(CourseSchudle[] wednesday) {
+    public void setWednesday(String wednesday) {
         this.wednesday = wednesday;
     }
 
-    public CourseSchudle[] getThursday() {
+    public String getThursday() {
         return thursday;
     }
 
-    public void setThursday(CourseSchudle[] thursday) {
+    public void setThursday(String thursday) {
         this.thursday = thursday;
     }
 
-    public CourseSchudle[] getFriday() {
+    public String getFriday() {
         return friday;
     }
 
-    public void setFriday(CourseSchudle[] friday) {
+    public void setFriday(String friday) {
         this.friday = friday;
     }
 }

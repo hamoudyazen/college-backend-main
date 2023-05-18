@@ -228,9 +228,9 @@ public class LoginController {
             if (teacherList.size() >= 1) {
                 User teacher = teacherList.get(0);
                 List<String> courseIds = teacher.getCourseIds();
-                if (courseIds.size() >= 1) {
+                if (courseIds.size() >= 5) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(new ErrorResponse("Teacher has reached maximum number of courses"));
+                            .body(new ErrorResponse("Teacher has reached the maximum number of courses"));
                 }
                 courseIds.add(id);
                 teacher.setCourseIds(courseIds);
@@ -242,34 +242,23 @@ public class LoginController {
             // Add the course to Firestore
             FirestoreClient.getFirestore().collection("courses").document(id).set(course);
 
-            // Query Firestore to get the major by name
+            // Update the coursesList field in the major's collection
             String majorName = course.getMajor();
-            QuerySnapshot majorQuerySnapshot = FirestoreClient.getFirestore().collection("majors")
-                    .whereEqualTo("majorName", majorName).get().get();
-            if (!majorQuerySnapshot.isEmpty()) {
-                Major major = majorQuerySnapshot.getDocuments().get(0).toObject(Major.class);
-                List<String> courses = major.getCourses();
-
-                if (courses.size() < 5) {
-                    courses.add(id);
-                    major.setCourses(courses);
-                    FirestoreClient.getFirestore().collection("majors").document(major.getId()).set(major);
-                } else {
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(new ErrorResponse("Major has reached maximum number of courses"));
-                }
-            } else {
-                // Major not found, create a new major
-                Major major = new Major();
-                major.setId(id); // Set majorId to the generated ID
-                major.setMajorName(majorName);
-                major.setCourses(Collections.singletonList(id));
-                FirestoreClient.getFirestore().collection("majors").document(major.getId()).set(major);
+            ApiFuture<QuerySnapshot> majorFuture = FirestoreClient.getFirestore().collection("majors")
+                    .whereEqualTo("majorName", majorName).get();
+            List<QueryDocumentSnapshot> majorDocuments = majorFuture.get().getDocuments();
+            for (QueryDocumentSnapshot majorDocument : majorDocuments) {
+                Major major = majorDocument.toObject(Major.class);
+                List<String> coursesList = major.getCoursesList();
+                coursesList.add(id);
+                major.setCoursesList(coursesList);
+                FirestoreClient.getFirestore().collection("majors").document(majorDocument.getId()).set(major);
             }
 
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during registration"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("An error occurred during registration"));
         }
     }
 
@@ -1134,19 +1123,105 @@ public class LoginController {
 
 
 
-    @GetMapping("/getCourseDetails")
+    @GetMapping("/getMajorDetails")
     @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<List<Course>> getCourseDetails(@RequestParam String id) {
+    public ResponseEntity<List<Major>> getMajorDetails(@RequestParam String majorName) {
         try {
-            ApiFuture<QuerySnapshot> future = FirestoreClient.getFirestore().collection("courses").whereEqualTo("id", id).get();
-            List<Course> courseList = new ArrayList<>();
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference collectionRef = firestore.collection("majors");
+            Query query = collectionRef.whereEqualTo("majorName", majorName);
+            ApiFuture<QuerySnapshot> future = query.get();
+            List<Major> majorList = new ArrayList<>();
+            QuerySnapshot querySnapshot = future.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
             for (QueryDocumentSnapshot document : documents) {
-                Course course = document.toObject(Course.class);
-                courseList.add(course);
+                Major major = document.toObject(Major.class);
+                majorList.add(major);
             }
-            return ResponseEntity.ok(courseList);
+            return ResponseEntity.ok(majorList);
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/createMajor")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> createMajor(@RequestBody Major major) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+
+            Query query = FirestoreClient.getFirestore().collection("majors")
+                    .whereEqualTo("majorName", major.getMajorName());
+            QuerySnapshot querySnapshot = query.get().get();
+
+            if (!querySnapshot.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User Already Exists"));
+            }
+
+            String id = UUID.randomUUID().toString();
+            major.setId(id);
+
+            FirebaseAuth.getInstance().createUser(new UserRecord.CreateRequest().setUid(id));
+
+            FirestoreClient.getFirestore().collection("majors").document(id).set(major);
+
+
+            return ResponseEntity.ok("Major created and added successfully");
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
+
+
+    }
+    @PutMapping("/updateSchedule")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> updateSchedule(@RequestBody Major major) {
+        try {
+            System.out.println("update here");
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference collectionRef = firestore.collection("majors");
+            Query query = collectionRef.whereEqualTo("majorName", major.getMajorName());
+            ApiFuture<QuerySnapshot> future = query.get();
+            QuerySnapshot querySnapshot = future.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+
+            if (documents.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            DocumentSnapshot document = documents.get(0);
+            String documentId = document.getId();
+            firestore.collection("majors").document(documentId).set(major);
+
+            return ResponseEntity.ok("Schedule updated successfully");
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+    @PutMapping("/updateScheduleEditStatus")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> updateScheduleEditStatus(@RequestParam String id, @RequestParam boolean status) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference collectionRef = firestore.collection("majors");
+            Query query = collectionRef.whereEqualTo("id", id);
+            ApiFuture<QuerySnapshot> future = query.get();
+            QuerySnapshot querySnapshot = future.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+
+            if (documents.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            DocumentSnapshot document = documents.get(0);
+            String documentId = document.getId();
+            firestore.collection("majors").document(documentId).update("beingEdited", status);
+
+            return ResponseEntity.ok("Schedule updated successfully");
+        } catch (InterruptedException | ExecutionException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -1155,34 +1230,9 @@ public class LoginController {
 
 
 
-    @PostMapping("/addPublicSchedule")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<?> addPublicSchedule(@RequestBody PublicSchedule ps) {
-        try {
-            System.out.println("trying here");
-            String majorName = ps.getMajorName();
 
-            // Query Firestore to check if an assignment with the given name already exists
-            QuerySnapshot querySnapshot = FirestoreClient.getFirestore().collection("publicSchedule")
-                    .whereEqualTo("majorName", majorName).get().get();
 
-            if (querySnapshot.isEmpty()) {
-                // Generate a unique ID for the assignment
-                String id = UUID.randomUUID().toString();
-                ps.setId(id);
 
-                // Add the assignment to Firestore
-                FirestoreClient.getFirestore().collection("publicSchedule").document(id).set(ps);
-            } else {
-                // Assignment already exists, return an error response
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("Assignment already exists"));
-            }
-
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during assignment creation"));
-        }
-    }
 
 
 
