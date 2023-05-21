@@ -123,13 +123,34 @@ public class Major {
     public static class CourseInsideMajor {
         private String courseId;
         private String timeSlot;
+        private String title;
+        private String description;
 
         public CourseInsideMajor() {
         }
 
-        public CourseInsideMajor(String courseId, String timeSlot) {
+        public CourseInsideMajor(String courseId, String timeSlot , String title, String description) {
             this.courseId = courseId;
             this.timeSlot = timeSlot;
+            this.title=title;
+            this.description=description;
+
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
         }
 
         public String getCourseId() {
@@ -148,4 +169,5 @@ public class Major {
             this.timeSlot = timeSlot;
         }
     }
+
 }

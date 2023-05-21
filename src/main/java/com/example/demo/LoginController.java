@@ -215,16 +215,9 @@ public class LoginController {
 
             // Query Firestore to get the teacher by their ID
             String teacherID = course.getTeacherID();
-            ApiFuture<QuerySnapshot> future = FirestoreClient.getFirestore().collection("users")
-                    .whereEqualTo("id", teacherID).get();
-            List<User> teacherList = new ArrayList<>();
-            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-            for (QueryDocumentSnapshot document : documents) {
-                User teacher = document.toObject(User.class);
-                teacherList.add(teacher);
-            }
-
-            // Check if the teacher has less than 5 courses
+            QuerySnapshot teacherQuerySnapshot = FirestoreClient.getFirestore().collection("users")
+                    .whereEqualTo("id", teacherID).get().get();
+            List<User> teacherList = teacherQuerySnapshot.toObjects(User.class);
             if (teacherList.size() >= 1) {
                 User teacher = teacherList.get(0);
                 List<String> courseIds = teacher.getCourseIds();
@@ -244,15 +237,14 @@ public class LoginController {
 
             // Update the coursesList field in the major's collection
             String majorName = course.getMajor();
-            ApiFuture<QuerySnapshot> majorFuture = FirestoreClient.getFirestore().collection("majors")
-                    .whereEqualTo("majorName", majorName).get();
-            List<QueryDocumentSnapshot> majorDocuments = majorFuture.get().getDocuments();
-            for (QueryDocumentSnapshot majorDocument : majorDocuments) {
-                Major major = majorDocument.toObject(Major.class);
+            QuerySnapshot majorQuerySnapshot = FirestoreClient.getFirestore().collection("majors")
+                    .whereEqualTo("majorName", majorName).get().get();
+            List<Major> majorList = majorQuerySnapshot.toObjects(Major.class);
+            for (Major major : majorList) {
                 List<String> coursesList = major.getCoursesList();
                 coursesList.add(id);
                 major.setCoursesList(coursesList);
-                FirestoreClient.getFirestore().collection("majors").document(majorDocument.getId()).set(major);
+                FirestoreClient.getFirestore().collection("majors").document(major.getId()).set(major);
             }
 
             return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -261,7 +253,6 @@ public class LoginController {
                     .body(new ErrorResponse("An error occurred during registration"));
         }
     }
-
 
 
     @PostMapping("/register")
@@ -1109,7 +1100,7 @@ public class LoginController {
             QuerySnapshot querySnapshot = future.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
             for (QueryDocumentSnapshot document : documents) {
-                List<String> courseIds = (List<String>) document.get("courses");
+                List<String> courseIds = (List<String>) document.get("coursesList");
                 if (courseIds != null) {
                     majorCoursesArray.addAll(courseIds);
                 }
@@ -1231,10 +1222,53 @@ public class LoginController {
 
 
 
+    @GetMapping("/getCourseDetails")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Course>> getCourseDetails(@RequestParam String id) {
+        try {
+            ApiFuture<QuerySnapshot> future = FirestoreClient.getFirestore().collection("courses").whereEqualTo("id", id).get();
+            List<Course> courseList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Course course = document.toObject(Course.class);
+                courseList.add(course);
+            }
+            return ResponseEntity.ok(courseList);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
 
 
 
+    @GetMapping("/getUserCourses")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<String>> getUserCourses(@RequestParam String email) {
+        try {
+            List<String> courseIdList = new ArrayList<>();
 
+            // Assuming you have a Firestore instance named "firestore"
+            Firestore db = FirestoreClient.getFirestore();
+
+            // Create a query to find courses where the "studentsArray" contains the specified email
+            Query query = db.collection("courses").whereArrayContains("studentsArray", email);
+
+            // Execute the query and retrieve the documents
+            ApiFuture<QuerySnapshot> querySnapshotFuture = query.get();
+            QuerySnapshot querySnapshot = querySnapshotFuture.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+
+            // Iterate through the documents and extract the course IDs
+            for (QueryDocumentSnapshot document : documents) {
+                String courseId = document.getId();
+                courseIdList.add(courseId);
+            }
+
+            return ResponseEntity.ok(courseIdList);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
 }
