@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 public class LoginController {
 
     @Autowired
@@ -1270,5 +1271,27 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+
+
+    @GetMapping("/getAllCourses")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Course>> getAllCourses() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference coursesRef = db.collection("courses");
+            ApiFuture<QuerySnapshot> future = coursesRef.get();
+            List<Course> courseList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Course course = document.toObject(Course.class);
+                courseList.add(course);
+            }
+            return new ResponseEntity<>(courseList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 }
