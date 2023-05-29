@@ -5,17 +5,15 @@ import java.util.List;
 public class Major {
     private String id;
     private String majorName;
-    private boolean isBeingEdited;
     private Schedule schedule;
     private List<String> coursesList;
 
     public Major() {
     }
 
-    public Major(String id, String majorName, boolean isBeingEdited, Schedule schedule, List<String> coursesList) {
+    public Major(String id, String majorName, Schedule schedule, List<String> coursesList) {
         this.id = id;
         this.majorName = majorName;
-        this.isBeingEdited = isBeingEdited;
         this.schedule = schedule;
         this.coursesList = coursesList;
     }
@@ -36,13 +34,6 @@ public class Major {
         this.majorName = majorName;
     }
 
-    public boolean isBeingEdited() {
-        return isBeingEdited;
-    }
-
-    public void setBeingEdited(boolean beingEdited) {
-        isBeingEdited = beingEdited;
-    }
 
     public Schedule getSchedule() {
         return schedule;
@@ -125,15 +116,17 @@ public class Major {
         private String timeSlot;
         private String title;
         private String description;
+        private String room;
 
         public CourseInsideMajor() {
         }
 
-        public CourseInsideMajor(String courseId, String timeSlot , String title, String description) {
+        public CourseInsideMajor(String courseId, String timeSlot , String title, String description, String room) {
             this.courseId = courseId;
             this.timeSlot = timeSlot;
             this.title=title;
             this.description=description;
+            this.room=room;
 
         }
 
@@ -167,6 +160,14 @@ public class Major {
 
         public void setTimeSlot(String timeSlot) {
             this.timeSlot = timeSlot;
+        }
+
+        public String getRoom() {
+            return room;
+        }
+
+        public void setRoom(String room) {
+            this.room = room;
         }
     }
 

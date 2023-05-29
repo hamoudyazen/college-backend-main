@@ -18,6 +18,7 @@ public class User {
     private String enrollmentDate;
     private String major;
     private String image;
+    private boolean isEditingSchedule;
 
 
 
@@ -28,7 +29,7 @@ public class User {
         this.enrollmentDate = currentDate.format(formatter);
     }
 
-    public User(String id, String firstname, String lastname, String email, String password, String role, List<String> courseIds, String enrollmentDate,String major,String image ,  String birthday) {
+    public User(String id, String firstname, String lastname, String email, String password, String role, List<String> courseIds, String enrollmentDate,String major,String image ,  String birthday ,boolean isEditingSchedule) {
         this.id = id;
         this.firstname = firstname;
         this.lastname = lastname;
@@ -40,7 +41,16 @@ public class User {
         this.major = major;
         this.image = image;
         this.birthday = birthday;
+        this.isEditingSchedule=false;
 
+    }
+
+    public boolean isEditingSchedule() {
+        return isEditingSchedule;
+    }
+
+    public void setEditingSchedule(boolean editingSchedule) {
+        isEditingSchedule = editingSchedule;
     }
 
     public String getBirthday() {

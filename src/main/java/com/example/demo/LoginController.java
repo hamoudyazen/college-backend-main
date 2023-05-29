@@ -1,4 +1,6 @@
 package com.example.demo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.Authentication;
 import com.google.cloud.firestore.*;
 import com.google.firebase.FirebaseApp;
@@ -10,6 +12,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.messaging.FirebaseMessaging;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -278,6 +281,7 @@ public class LoginController {
             String hashedPassword = hashPassword(user.getPassword());
             user.setPassword(hashedPassword);
             user.setRole("student");
+            user.setEditingSchedule(false);
             user.setCourseIds(Collections.emptyList()); // empty list of course IDs
             user.setImage("https://firebasestorage.googleapis.com/v0/b/collegeproject-b85f0.appspot.com/o/profile%2Fdefault.jpg?alt=media&token=3ddf9690-9677-4a63-9a45-5a977d751ef0"); // empty list of course IDs
 
@@ -1198,25 +1202,33 @@ public class LoginController {
     public ResponseEntity<?> updateScheduleEditStatus(@RequestParam String id, @RequestParam boolean status) {
         try {
             Firestore firestore = FirestoreClient.getFirestore();
-            CollectionReference collectionRef = firestore.collection("majors");
-            Query query = collectionRef.whereEqualTo("id", id);
-            ApiFuture<QuerySnapshot> future = query.get();
-            QuerySnapshot querySnapshot = future.get();
-            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+            DocumentReference documentRef = firestore.collection("users").document(id);
+            ApiFuture<DocumentSnapshot> future = documentRef.get();
+            DocumentSnapshot document = future.get();
 
-            if (documents.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
 
-            DocumentSnapshot document = documents.get(0);
-            String documentId = document.getId();
-            firestore.collection("majors").document(documentId).update("beingEdited", status);
+            documentRef.update("editingSchedule", status);
 
-            return ResponseEntity.ok("Schedule updated successfully");
-        } catch (InterruptedException | ExecutionException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Schedule updated successfully");
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResponse = mapper.writeValueAsString(response);
+
+            // Set the response content type as JSON
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            return new ResponseEntity<>(jsonResponse, headers, HttpStatus.OK);
+        } catch (InterruptedException | ExecutionException | JsonProcessingException e) {
+            // Log the error for debugging purposes
+            e.printStackTrace();
+
+            // Return a custom error response
+            String errorMessage = "Failed to update schedule.";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
         }
     }
+
 
 
 
@@ -1292,6 +1304,204 @@ public class LoginController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+
+    @GetMapping("/getAllUsers")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<User>> getAllUsers() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference coursesRef = db.collection("users");
+            ApiFuture<QuerySnapshot> future = coursesRef.get();
+            List<User> userList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                User user = document.toObject(User.class);
+                userList.add(user);
+            }
+            return new ResponseEntity<>(userList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @DeleteMapping("/deleteUserAdmin")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> deleteUserAdmin(@RequestParam String email) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference usersRef = db.collection("users");
+
+            Query query = usersRef.whereEqualTo("email", email);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+
+            if (!documents.isEmpty()) {
+                for (DocumentSnapshot document : documents) {
+                    document.getReference().delete(); // Delete the document
+                }
+                return new ResponseEntity<>("User deleted successfully", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    @PutMapping("/updateUserEmailAdmin")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> updateUserEmailAdmin(@RequestBody Map<String, String> requestBody) {
+        String userId = requestBody.get("userId");
+        String newEmail = requestBody.get("newEmail");
+
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            DocumentReference userRef = db.collection("users").document(userId);
+
+            ApiFuture<DocumentSnapshot> future = userRef.get();
+            DocumentSnapshot document = future.get();
+
+            if (document.exists()) {
+                userRef.update("email", newEmail);
+                User updatedUser = document.toObject(User.class);
+                updatedUser.setEmail(newEmail);
+                return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    @GetMapping("/getAllCoursesAdmin")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Course>> getAllCoursesAdmin() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference coursesRef = db.collection("courses");
+            ApiFuture<QuerySnapshot> future = coursesRef.get();
+            List<Course> courseList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Course course = document.toObject(Course.class);
+                courseList.add(course);
+            }
+            return new ResponseEntity<>(courseList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @DeleteMapping("/deleteCourseAdmin")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> deleteCourseAdmin(@RequestParam String courseID) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference courseRef = db.collection("courses");
+
+            Query query = courseRef.whereEqualTo("id", courseID);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+
+            if (!documents.isEmpty()) {
+                for (DocumentSnapshot document : documents) {
+                    document.getReference().delete(); // Delete the document
+                }
+                return new ResponseEntity<>("Course deleted successfully", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Course not found", HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping("/getAllMajorsAdmin")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Major>> getAllMajorsAdmin() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference majorsRef = db.collection("majors");
+            ApiFuture<QuerySnapshot> future = majorsRef.get();
+            List<Major> majorList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Major major = document.toObject(Major.class);
+                majorList.add(major);
+            }
+            return new ResponseEntity<>(majorList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping("/getStudentCoursesList")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Course>> getStudentCoursesList(@RequestParam String email) {
+        // Query the "courses" collection for courses that contain the student's email in the "studentsArray" field
+        try {
+            ApiFuture<QuerySnapshot> future = FirestoreClient.getFirestore()
+                    .collection("courses")
+                    .whereArrayContains("studentsArray", email)
+                    .get();
+
+            List<Course> courseList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Course course = document.toObject(Course.class);
+                courseList.add(course);
+            }
+            return new ResponseEntity<>(courseList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/deleteStudentFromCourse")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> deleteStudentFromCourse(@RequestParam String email, @RequestParam String courseId) {
+        try {
+            // Retrieve the course document from Firestore
+            DocumentReference courseRef = FirestoreClient.getFirestore().collection("courses").document(courseId);
+            ApiFuture<DocumentSnapshot> courseFuture = courseRef.get();
+            DocumentSnapshot courseSnapshot = courseFuture.get();
+
+            // Check if the course exists
+            if (courseSnapshot.exists()) {
+                // Retrieve the course object
+                Course course = courseSnapshot.toObject(Course.class);
+
+                // Remove the student's email from the studentsArray field
+                List<String> studentsArray = course.getStudentsArray();
+                if (studentsArray != null && studentsArray.contains(email)) {
+                    studentsArray.remove(email);
+
+                    // Update the course document in Firestore
+                    ApiFuture<WriteResult> updateFuture = courseRef.set(course);
+                    updateFuture.get();
+
+                    return new ResponseEntity<>("Student removed from the course successfully.", HttpStatus.OK);
+                } else {
+                    return new ResponseEntity<>("The student is not enrolled in the course.", HttpStatus.NOT_FOUND);
+                }
+            } else {
+                return new ResponseEntity<>("Course not found.", HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("An error occurred while deleting the student from the course.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 
 }
