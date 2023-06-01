@@ -138,8 +138,6 @@ public class LoginController {
     }
 
 
-
-
     @GetMapping("/getId")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<Map<String, String>> getId(@RequestParam String email) {
@@ -195,8 +193,6 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
-
 
 
     @PostMapping("/registercourse")
@@ -271,8 +267,7 @@ public class LoginController {
             if (!querySnapshot.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User Already Exist"));
             }
-            if(user.getPassword().length()<8)
-            {
+            if (user.getPassword().length() < 8) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Password Short"));
             }
 
@@ -284,7 +279,6 @@ public class LoginController {
             user.setEditingSchedule(false);
             user.setCourseIds(Collections.emptyList()); // empty list of course IDs
             user.setImage("https://firebasestorage.googleapis.com/v0/b/collegeproject-b85f0.appspot.com/o/profile%2Fdefault.jpg?alt=media&token=3ddf9690-9677-4a63-9a45-5a977d751ef0"); // empty list of course IDs
-
 
 
             UserRecord.CreateRequest request = new UserRecord.CreateRequest()
@@ -378,6 +372,7 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Error updating email"));
         }
     }
+
     @PostMapping("/addStudent")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> addStudent(@RequestBody Map<String, String> request) {
@@ -403,9 +398,9 @@ public class LoginController {
 
 
             return ResponseEntity.ok().body(Map.of("message", "Student added successfully."));
-        }      catch (InterruptedException | ExecutionException e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Error adding student"));
-    }
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Error adding student"));
+        }
     }
 
     public boolean isEmailVerified(String email) {
@@ -444,8 +439,7 @@ public class LoginController {
                         return ResponseEntity.ok(0);
                     }
 
-                }
-                else {
+                } else {
                     return ResponseEntity.ok(0);
                 }
             }
@@ -496,7 +490,6 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Login failed"));
         }
     }
-
 
 
     @PutMapping("/updateProfileFirstname")
@@ -713,8 +706,6 @@ public class LoginController {
             assignment.setStudentUploads(Collections.emptyList()); // empty list of student IDs
 
 
-
-
             // Add the assignment to Firestore
             FirestoreClient.getFirestore().collection("assignments").document(id).set(assignment);
 
@@ -842,7 +833,6 @@ public class LoginController {
     }
 
 
-
     @PostMapping("/submissions")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> submissions(@RequestBody Submission submission) {
@@ -873,9 +863,6 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during submission creation"));
         }
     }
-
-
-
 
 
     @GetMapping("/teacherAssignmentsSubmissions")
@@ -933,7 +920,6 @@ public class LoginController {
     }
 
 
-
     @GetMapping("/studentMySubmissions")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<Submission>> studentMySubmissions(@RequestParam String id) {
@@ -980,7 +966,6 @@ public class LoginController {
     }
 
 
-
     //////////
 
     @PostMapping("/CourseMaterial")
@@ -1010,8 +995,7 @@ public class LoginController {
 
             List<CourseMaterial> courseList = new ArrayList<>();
             List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-            for (QueryDocumentSnapshot document : documents)
-            {
+            for (QueryDocumentSnapshot document : documents) {
                 CourseMaterial courseMaterial = document.toObject(CourseMaterial.class);
                 courseList.add(courseMaterial);
 
@@ -1021,6 +1005,7 @@ public class LoginController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     public static class LoginRequest {
         private String email;
         private String password;
@@ -1118,7 +1103,6 @@ public class LoginController {
     }
 
 
-
     @GetMapping("/getMajorDetails")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<Major>> getMajorDetails(@RequestParam String majorName) {
@@ -1168,8 +1152,8 @@ public class LoginController {
         }
 
 
-
     }
+
     @PutMapping("/updateSchedule")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> updateSchedule(@RequestBody Major major) {
@@ -1230,11 +1214,6 @@ public class LoginController {
     }
 
 
-
-
-
-
-
     @GetMapping("/getCourseDetails")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<Course>> getCourseDetails(@RequestParam String id) {
@@ -1251,8 +1230,6 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
-
 
 
     @GetMapping("/getUserCourses")
@@ -1283,7 +1260,6 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
 
     @GetMapping("/getAllCourses")
@@ -1351,7 +1327,6 @@ public class LoginController {
     }
 
 
-
     @PutMapping("/updateUserEmailAdmin")
     @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> updateUserEmailAdmin(@RequestBody Map<String, String> requestBody) {
@@ -1377,7 +1352,6 @@ public class LoginController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
 
     @GetMapping("/getAllCoursesAdmin")
@@ -1502,6 +1476,42 @@ public class LoginController {
         }
     }
 
+    @GetMapping("/getExpensesAndIncome")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<ExpensesAndIncome>> getExpensesAndIncome(@RequestParam String userID) {
+        try {
+            ApiFuture<QuerySnapshot> future = FirestoreClient.getFirestore()
+                    .collection("expensesAndIncome")
+                    .whereEqualTo("userId", userID)
+                    .get();
+
+            List<ExpensesAndIncome> data = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                ExpensesAndIncome item = document.toObject(ExpensesAndIncome.class);
+                data.add(item);
+            }
+            return new ResponseEntity<>(data, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @PostMapping("/createExpensesAndIncome")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> createExpensesAndIncome(@RequestBody ExpensesAndIncome expensesAndIncome) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+            DocumentReference docRef = firestore.collection("expensesAndIncome").document();
+            expensesAndIncome.setId(docRef.getId());
+            ApiFuture<WriteResult> future = docRef.set(expensesAndIncome);
+            future.get();
+            return new ResponseEntity<>("Document created successfully", HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to create document", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
 
 }
