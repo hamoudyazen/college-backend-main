@@ -1514,4 +1514,28 @@ public class LoginController {
     }
 
 
+    @DeleteMapping("/deleteIncomeOrExpesnse")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> deleteIncomeOrExpesnse(@RequestParam String itemID) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference courseRef = db.collection("expensesAndIncome");
+
+            Query query = courseRef.whereEqualTo("id", itemID);
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+
+            if (!documents.isEmpty()) {
+                for (DocumentSnapshot document : documents) {
+                    document.getReference().delete(); // Delete the document
+                }
+                return new ResponseEntity<>("deleted successfully", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("not found", HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }
