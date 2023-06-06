@@ -1538,4 +1538,151 @@ public class LoginController {
         }
     }
 
+
+    @PostMapping("/createMessage")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> createMessage(@RequestBody ChatMessage chat) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+
+            // Check if a document with the same user1ID and user2ID already exists
+            CollectionReference messagesCollection = firestore.collection("messages");
+            Query query = messagesCollection.whereEqualTo("user1ID", chat.getUser1ID())
+                    .whereEqualTo("user2ID", chat.getUser2ID());
+            QuerySnapshot querySnapshot = query.get().get();
+
+            // Check if a document with the same user2ID and user1ID already exists
+            Query query2 = messagesCollection.whereEqualTo("user2ID", chat.getUser1ID())
+                    .whereEqualTo("user1ID", chat.getUser2ID());
+            QuerySnapshot querySnapshot2 = query2.get().get();
+
+            if (!querySnapshot.isEmpty() || !querySnapshot2.isEmpty()) {
+                // Document with the same user1ID and user2ID already exists
+                return new ResponseEntity<>("Chat already exists", HttpStatus.OK);
+            }
+
+            // Create a new chat document
+            DocumentReference docRef = messagesCollection.document();
+            chat.setChatID(docRef.getId());
+            ApiFuture<WriteResult> future = docRef.set(chat);
+            future.get();
+
+            return new ResponseEntity<>("Document created successfully", HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to create document", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    @GetMapping("/getMessages")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<ChatMessage>> getMessages(@RequestParam String userID1, @RequestParam String userID2) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+
+            // Query Firestore to get the messages
+            CollectionReference messagesCollection = firestore.collection("messages");
+            Query query = messagesCollection
+                    .whereIn("user1ID", Arrays.asList(userID1, userID2))
+                    .whereIn("user2ID", Arrays.asList(userID1, userID2));
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+
+            List<ChatMessage> data = new ArrayList<>();
+            for (DocumentSnapshot document : querySnapshot.get().getDocuments()) {
+                ChatMessage item = document.toObject(ChatMessage.class);
+                data.add(item);
+            }
+
+            return new ResponseEntity<>(data, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @PostMapping("/sendMessages")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<ChatMessage>> sendMessages(@RequestParam String userID1, @RequestParam String userID2, @RequestBody ChatMessage.MessageDetails[] messageDetails) {
+        try {
+            Firestore firestore = FirestoreClient.getFirestore();
+            // Query Firestore to get the messages
+            CollectionReference messagesCollection = firestore.collection("messages");
+            Query query = messagesCollection
+                    .whereIn("user1ID", Arrays.asList(userID1, userID2))
+                    .whereIn("user2ID", Arrays.asList(userID1, userID2));
+            ApiFuture<QuerySnapshot> querySnapshot = query.get();
+
+            List<ChatMessage> data = new ArrayList<>();
+            for (DocumentSnapshot document : querySnapshot.get().getDocuments()) {
+                ChatMessage item = document.toObject(ChatMessage.class);
+                data.add(item);
+            }
+
+            for (ChatMessage chat : data) {
+                if (messageDetails[0].getSenderID().equals(userID1)) {
+                    if (chat.getMessagesArray().getUser1IDMessages().getMessage() == null) {
+                        chat.getMessagesArray().getUser1IDMessages().setMessage(new ArrayList<>());
+                    }
+                    chat.getMessagesArray().getUser1IDMessages().getMessage().addAll(Arrays.asList(messageDetails));
+                } else {
+                    if (chat.getMessagesArray().getUser2IDMessages().getMessage() == null) {
+                        chat.getMessagesArray().getUser2IDMessages().setMessage(new ArrayList<>());
+                    }
+                    chat.getMessagesArray().getUser2IDMessages().getMessage().addAll(Arrays.asList(messageDetails));
+                }
+                // Update the chat in Firestore
+                messagesCollection.document(chat.getChatID()).set(chat);
+            }
+
+            return new ResponseEntity<>(data, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    @PostMapping("/sendMessage")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> sendMessage(@RequestBody Map<String, String> request) {
+        try {
+            String currentChatID = request.get("currentChatID");
+            String senderID = request.get("senderID");
+            String message = request.get("message");
+
+            // Query Firestore to get the chat message with the given ID
+            DocumentReference messageRef = FirestoreClient.getFirestore().collection("messages").document(currentChatID);
+            ApiFuture<DocumentSnapshot> messageFuture = messageRef.get();
+            DocumentSnapshot messageDoc = messageFuture.get();
+            if (!messageDoc.exists()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("Message Collection not found"));
+            }
+
+            // Retrieve the chat message and its messages list
+            ChatMessage chatMessage = messageDoc.toObject(ChatMessage.class);
+            if(chatMessage.getUser1ID().equals(senderID)){
+
+            List<ChatMessage.MessageDetails> messagesList = chatMessage.getMessagesArray().getUser1IDMessages().getMessage();
+            // Add the new message to the messages list
+            ChatMessage.MessageDetails newMessage = new ChatMessage.MessageDetails(message, new Date(), senderID);
+            messagesList.add(newMessage);
+            }
+            else
+            {
+                List<ChatMessage.MessageDetails> messagesList = chatMessage.getMessagesArray().getUser2IDMessages().getMessage();
+                // Add the new message to the messages list
+                ChatMessage.MessageDetails newMessage = new ChatMessage.MessageDetails(message, new Date(), senderID);
+                messagesList.add(newMessage);
+            }
+            // Update the chat message in Firestore
+            messageRef.set(chatMessage).get();
+
+            return ResponseEntity.ok().body(Map.of("message", "Message sent successfully."));
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Error sending message"));
+        }
+    }
+
+
 }
