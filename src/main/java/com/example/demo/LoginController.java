@@ -1685,4 +1685,147 @@ public class LoginController {
     }
 
 
+    @PostMapping("/addZoomLink")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> addZoomLink(@RequestBody uploadZoomTeacher zoomLink) {
+        try {
+            String zoomLinkCourseName = zoomLink.getCourseName();
+
+            // Get a reference to the "zoomLinks" collection in Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference zoomLinksCollection = firestore.collection("zoomLinks");
+
+            // Query Firestore to check if the zoom link already exists
+            Query query = zoomLinksCollection.whereEqualTo("courseName", zoomLinkCourseName);
+            QuerySnapshot querySnapshot = query.get().get();
+
+            if (querySnapshot.isEmpty()) {
+                // Generate a unique ID for the zoom link
+                String id = UUID.randomUUID().toString();
+                zoomLink.setId(id);
+
+                // Add the zoom link to Firestore
+                zoomLinksCollection.document(id).set(zoomLink);
+
+                return ResponseEntity.status(HttpStatus.CREATED).build();
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("The zoom link already exists."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the creation of the zoom link."));
+        }
+    }
+
+    @DeleteMapping("/deleteZoomLink/{id}")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> deleteZoomLink(@PathVariable String id) {
+        try {
+            // Get a reference to the "zoomLinks" collection in Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference zoomLinksCollection = firestore.collection("zoomLinks");
+
+            // Check if the Zoom link with the given ID exists
+            DocumentReference zoomLinkDoc = zoomLinksCollection.document(id);
+            DocumentSnapshot documentSnapshot = zoomLinkDoc.get().get();
+
+            if (documentSnapshot.exists()) {
+                // Delete the Zoom link from Firestore
+                zoomLinkDoc.delete();
+
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("The zoom link does not exist."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the deletion of the zoom link."));
+        }
+    }
+
+    @GetMapping("/getAllZoomLinks")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<uploadZoomTeacher>> getAllZoomLinks() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference coursesRef = db.collection("zoomLinks");
+            ApiFuture<QuerySnapshot> future = coursesRef.get();
+            List<uploadZoomTeacher> courseList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                uploadZoomTeacher course = document.toObject(uploadZoomTeacher.class);
+                courseList.add(course);
+            }
+            return new ResponseEntity<>(courseList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @PostMapping("/addGrade")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> addGrade(@RequestBody Grade grade) {
+        try {
+
+            // Get a reference to the "zoomLinks" collection in Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference zoomLinksCollection = firestore.collection("grades");
+
+                // Generate a unique ID for the zoom link
+                String id = UUID.randomUUID().toString();
+                grade.setId(id);
+
+                // Add the zoom link to Firestore
+                zoomLinksCollection.document(id).set(grade);
+
+                return ResponseEntity.status(HttpStatus.CREATED).build();
+
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the creation of the zoom link."));
+        }
+    }
+
+    @DeleteMapping("/deleteGrade/{id}")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> deleteGrade(@PathVariable String id) {
+        try {
+            // Get a reference to the "zoomLinks" collection in Firestore
+            Firestore firestore = FirestoreClient.getFirestore();
+            CollectionReference gradesCollection = firestore.collection("grades");
+
+            // Check if the Zoom link with the given ID exists
+            DocumentReference zoomLinkDoc = gradesCollection.document(id);
+            DocumentSnapshot documentSnapshot = zoomLinkDoc.get().get();
+
+            if (documentSnapshot.exists()) {
+                // Delete the Zoom link from Firestore
+                zoomLinkDoc.delete();
+
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("The zoom link does not exist."));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the deletion of the zoom link."));
+        }
+    }
+
+    @GetMapping("/getAllGrades")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Grade>> getAllGrades() {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            CollectionReference coursesRef = db.collection("grades");
+            ApiFuture<QuerySnapshot> future = coursesRef.get();
+            List<Grade> gardeList = new ArrayList<>();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                Grade courseU = document.toObject(Grade.class);
+                gardeList.add(courseU);
+            }
+            return new ResponseEntity<>(gardeList, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
