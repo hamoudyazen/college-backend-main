@@ -1781,7 +1781,7 @@ public class LoginController {
 
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the creation of the zoom link."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An error occurred during the creation of the grade."));
         }
     }
 
