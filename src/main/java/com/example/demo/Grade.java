@@ -1,21 +1,33 @@
 package com.example.demo;
 
+import java.util.Date;
+
 public class Grade {
     private String id;
     private String studentEmail;
     private String courseId;
     private String courseName;
+    private Date date;
     private int grade;
 
     public Grade() {
     }
 
-    public Grade(String id, String studentEmail, String courseId, String courseName, int grade) {
+    public Grade(String id, String studentEmail, String courseId, String courseName, int grade,Date date) {
         this.id = id;
         this.studentEmail = studentEmail;
         this.courseId = courseId;
         this.courseName = courseName;
         this.grade = grade;
+        this.date = new Date();
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 
     public String getId() {
